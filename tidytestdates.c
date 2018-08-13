@@ -2,6 +2,7 @@
 #include <tidy.h>
 #include <tidybuffio.h>
 #include <curl/curl.h>
+#include <string.h>
 
 uint write_cb(char *in, uint size, uint nmemb, TidyBuffer *out)
 {
@@ -11,28 +12,29 @@ uint write_cb(char *in, uint size, uint nmemb, TidyBuffer *out)
   return r;
 }
 
-void dumpNode(TidyDoc doc, TidyNode tnod, int indent)
+void dumpNode(TidyDoc doc, TidyNode tnode, int toPrint)
 {
   TidyNode child;
-  for(child = tidyGetChild(tnod); child; child = tidyGetNext(child)) {
+  for(child = tidyGetChild(tnode); child; child = tidyGetNext(child)) {
     ctmbstr name = tidyNodeGetName(child);
     if(name) {
-      TidyAttr attr;
-      printf("%*.*s%s ", indent, indent, "<", name);
-      for(attr = tidyAttrFirst(child); attr; attr = tidyAttrNext(attr) ) {
-        printf(tidyAttrName(attr));
-        tidyAttrValue(attr)?printf("=\"%s\" ", tidyAttrValue(attr)):printf(" ");
+      if(strcmp(name, "td") == 0)
+      {
+         dumpNode(doc, child, 1);
       }
-      printf(">\n");
+      if(strcmp(name, "strong") == 0 && toPrint == 1)
+      {
+         dumpNode(doc, child, 2);
+      }
     }
-    else {
+    else if(toPrint == 2){
       TidyBuffer buf;
       tidyBufInit(&buf);
       tidyNodeGetText(doc, child, &buf);
-      printf("%*.*s\n", indent, indent, buf.bp?(char *)buf.bp:"");
+      printf("%s", buf.bp?(char *)buf.bp:"");
       tidyBufFree(&buf);
     }
-    dumpNode(doc, child, indent + 4);
+    dumpNode(doc, child, 0);
   }
 }
 
@@ -49,11 +51,11 @@ int main()
  
   curl = curl_easy_init();
 
+  printf("Upcoming SAT dates: \n");
   if(curl) {
     curl_easy_setopt(curl, CURLOPT_URL, satUrl);
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, curl_errbuf);
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-    curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_cb);
 

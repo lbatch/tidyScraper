@@ -1,0 +1,9 @@
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100 74559    0 74559    0     0  47435      0 --:--:--  0:00:01 --:--:-- 47429100 74559    0 74559    0     0  47411      0 --:--:--  0:00:01 --:--:-- 47399
+line 542 column 11 - Warning: <iframe> attribute "src" lacks value
+line 874 column 5 - Warning: moved <style> tag to <head>! fix-style-tags: no to avoid.
+Info: Document content looks like HTML5
+Tidy found 2 warnings and 0 errors!
+
+
