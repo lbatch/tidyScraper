@@ -12,19 +12,22 @@ uint write_cb(char *in, uint size, uint nmemb, TidyBuffer *out)
   return r;
 }
 
-void dumpNode(TidyDoc doc, TidyNode tnode, int toPrint)
+// function for parsing ACT test date page
+void dumpNodeACT(TidyDoc doc, TidyNode tnode, int toPrint)
 {
   TidyNode child;
   for(child = tidyGetChild(tnode); child; child = tidyGetNext(child)) {
     ctmbstr name = tidyNodeGetName(child);
+    // print the first td in each tr
     if(name) {
-      if(strcmp(name, "td") == 0)
+      if(strcmp(name, "tr") == 0)
       {
-         dumpNode(doc, child, 1);
+         dumpNodeACT(doc, child, 1);
       }
-      if(strcmp(name, "strong") == 0 && toPrint == 1)
+      if(strcmp(name, "td") == 0 && toPrint == 1)
       {
-         dumpNode(doc, child, 2);
+         dumpNodeACT(doc, child, 2);
+         toPrint = 0;
       }
     }
     else if(toPrint == 2){
@@ -34,14 +37,48 @@ void dumpNode(TidyDoc doc, TidyNode tnode, int toPrint)
       printf("%s", buf.bp?(char *)buf.bp:"");
       tidyBufFree(&buf);
     }
-    dumpNode(doc, child, 0);
+    dumpNodeACT(doc, child, 0);    
   }
 }
 
-int main()
+// function for parsing SAT test date page
+void dumpNodeSAT(TidyDoc doc, TidyNode tnode, int toPrint)
+{
+  TidyNode child;
+  for(child = tidyGetChild(tnode); child; child = tidyGetNext(child)) {
+    ctmbstr name = tidyNodeGetName(child);
+    // print the bolded td in each tr
+    if(name) {
+      if(strcmp(name, "td") == 0)
+      {
+         dumpNodeSAT(doc, child, 1);
+      }
+      if(strcmp(name, "strong") == 0 && toPrint == 1)
+      {
+         dumpNodeSAT(doc, child, 2);
+      }
+    }
+    else if(toPrint == 2){
+      TidyBuffer buf;
+      tidyBufInit(&buf);
+      tidyNodeGetText(doc, child, &buf);
+      printf("%s", buf.bp?(char *)buf.bp:"");
+      tidyBufFree(&buf);
+    }
+    dumpNodeSAT(doc, child, 0);
+  }
+}
+
+int main(int argc, char* argv[])
 {
   int err;
-  char* satUrl = "https://collegereadiness.collegeboard.org/sat/register/dates-deadlines";
+  char* url = calloc(256, sizeof(char));
+
+  if(argc != 2 || (strcmp(argv[1], "ACT") != 0 && strcmp(argv[1], "SAT") != 0))
+  {
+     printf("Usage: %s [ACT/SAT]", argv[0]);
+     return 1;
+  }
 
   CURL *curl;
   char curl_errbuf[CURL_ERROR_SIZE];
@@ -51,9 +88,19 @@ int main()
  
   curl = curl_easy_init();
 
-  printf("Upcoming SAT dates: \n");
+  if(strcmp(argv[1], "SAT") == 0)
+  {
+    printf("UPCOMING SAT DATES\n");
+    url = "https://collegereadiness.collegeboard.org/sat/register/dates-deadlines";
+  }
+  else
+  {
+    printf("UPCOMING ACT DATES\n");
+    url = "https://www.act.org/content/act/en/products-and-services/the-act/registration.html";
+  }
+  
   if(curl) {
-    curl_easy_setopt(curl, CURLOPT_URL, satUrl);
+    curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, curl_errbuf);
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
@@ -75,12 +122,15 @@ int main()
         if(err >= 0) {
           err = tidyRunDiagnostics(tdoc);
           if(err >= 0) {
-            dumpNode(tdoc, tidyGetRoot(tdoc), 0);
+            if(strcmp(argv[1], "SAT") == 0) dumpNodeSAT(tdoc, tidyGetRoot(tdoc), 0);
+            else dumpNodeACT(tdoc, tidyGetRoot(tdoc), 0);
+
             fprintf(stderr, "%s\n", tidy_errbuf.bp);
           }
         }
       }
     }
+
     else
       fprintf(stderr, "%s\n", curl_errbuf);
 
